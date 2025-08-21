@@ -221,7 +221,7 @@ export default function OnboardingPage() {
               <div className="mx-auto mb-4">
                 <CheckCircle className="h-16 w-16 text-green-500" />
               </div>
-              <CardTitle className="text-2xl">🎉 Dein Profil und erstes Projekt sind bereit!</CardTitle>
+              <CardTitle className="text-2xl">🎉 Dein Profil ist bereit!</CardTitle>
               <CardDescription>
                 Du kannst jetzt andere Projekte entdecken und dich vernetzen
               </CardDescription>
