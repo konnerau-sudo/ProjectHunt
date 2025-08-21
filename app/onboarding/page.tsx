@@ -161,14 +161,16 @@ export default function OnboardingPage(): JSX.Element {
       // 2) Profil upserten (Client → Supabase; RLS prüft auth.uid())
       const { error: profileError } = await supabase
         .from('profiles')
-        .upsert({
-          id: user.id,
-          name: userProfile.name,
-          location: userProfile.location || null,
-          about: userProfile.about || null,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', user.id)
+        .upsert(
+          {
+            id: user.id,
+            name: userProfile.name,
+            location: userProfile.location || null,
+            about: userProfile.about || null,
+            updated_at: new Date().toISOString()
+          },
+          { onConflict: 'id', ignoreDuplicates: false } // wichtig: Konfliktspalte angeben
+        )
 
       if (profileError) {
         console.error('Profile upsert failed:', profileError)

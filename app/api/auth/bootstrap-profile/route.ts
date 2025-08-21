@@ -19,17 +19,19 @@ export async function POST(req: Request) {
     return new NextResponse('Name required', { status: 400 });
   }
 
-  // Upsert profile with explicit user.id constraint
+  // Upsert profile with onConflict specification
   const { error } = await supabase
     .from('profiles')
-    .upsert({ 
-      id: user.id, 
-      name: name.trim(), 
-      location: location ? location.trim() : null, 
-      about: about ? about.trim() : null,
-      updated_at: new Date().toISOString()
-    })
-    .eq('id', user.id);
+    .upsert(
+      { 
+        id: user.id, 
+        name: name.trim(), 
+        location: location ? location.trim() : null, 
+        about: about ? about.trim() : null,
+        updated_at: new Date().toISOString()
+      },
+      { onConflict: 'id', ignoreDuplicates: false }
+    );
 
   if (error) {
     console.error('Profile upsert error:', error);
