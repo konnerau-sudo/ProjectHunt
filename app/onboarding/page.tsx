@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { isOnboardingComplete, saveOnboardingData } from '@/lib/onboarding'
+import { UserProfile, Project, Collab, CATEGORIES } from '@/src/types/projecthunt'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,24 +13,18 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
 import { ArrowLeft, ArrowRight, CheckCircle } from 'lucide-react'
 
-interface UserProfile {
-  name: string
-  standort: string
-  aboutMe: string
+interface OnboardingUserProfile extends UserProfile {
   profileImage: File | null
   profileImagePreview: string | null
 }
 
-interface Project {
-  projekttitel: string
-  teaser: string
-  kategorien: string[]
-  status: string
+interface OnboardingProject extends Omit<Project, 'id' | 'owner_id' | 'created_at'> {
+  // All required fields for onboarding
 }
 
-export default function OnboardingPage() {
+export default function OnboardingPage(): JSX.Element {
   const router = useRouter()
-  const [currentStep, setCurrentStep] = useState(1)
+  const [currentStep, setCurrentStep] = useState<number>(1)
 
   // Guard: redirect if onboarding already complete
   useEffect(() => {
@@ -39,26 +34,26 @@ export default function OnboardingPage() {
   }, [])
   
   // State für User Profile (Schritt 1)
-  const [userProfile, setUserProfile] = useState<UserProfile>({
+  const [userProfile, setUserProfile] = useState<OnboardingUserProfile>({
     name: '',
-    standort: '',
-    aboutMe: '',
+    location: '',
+    about: '',
     profileImage: null,
     profileImagePreview: null
   })
 
   // State für Project (Schritt 2)
-  const [project, setProject] = useState<Project>({
-    projekttitel: '',
+  const [project, setProject] = useState<OnboardingProject>({
+    title: '',
     teaser: '',
-    kategorien: [],
-    status: ''
+    categories: [],
+    status: 'offen'
   })
 
-  // Dummy Kategorien
-  const kategorienOptions = ['FinTech', 'EdTech', 'DevTools', 'HealthTech', 'GreenTech', 'E-Commerce']
+  // Kategorien from types
+  const kategorienOptions = CATEGORIES
 
-  const handleProfileChange = (field: keyof UserProfile, value: string) => {
+  const handleProfileChange = (field: keyof OnboardingUserProfile, value: string): void => {
     setUserProfile(prev => ({ ...prev, [field]: value }))
   }
 
@@ -103,12 +98,12 @@ export default function OnboardingPage() {
     setProject(prev => ({ ...prev, [field]: value }))
   }
 
-  const handleKategorieToggle = (kategorie: string) => {
+  const handleKategorieToggle = (kategorie: string): void => {
     setProject(prev => ({
       ...prev,
-      kategorien: prev.kategorien.includes(kategorie)
-        ? prev.kategorien.filter(k => k !== kategorie)
-        : [...prev.kategorien, kategorie]
+      categories: prev.categories.includes(kategorie)
+        ? prev.categories.filter((k: string) => k !== kategorie)
+        : [...prev.categories, kategorie]
     }))
   }
 
@@ -124,19 +119,18 @@ export default function OnboardingPage() {
     }
   }
 
-  const handleFinish = () => {
+  const handleFinish = (): void => {
     // Save to localStorage
     const profileData = {
       name: userProfile.name,
-      standort: userProfile.standort,
-      aboutMe: userProfile.aboutMe,
-      profileImage: userProfile.profileImage ? 'uploaded' : null // Can't store File in localStorage
+      location: userProfile.location,
+      about: userProfile.about
     }
     
     const projectData = {
-      title: project.projekttitel, // Note: using 'title' as required by isOnboardingComplete
+      title: project.title,
       teaser: project.teaser,
-      kategorien: project.kategorien,
+      categories: project.categories,
       status: project.status
     }
     
@@ -153,10 +147,10 @@ export default function OnboardingPage() {
   }
 
   // Validation
-  const isStep1Valid = userProfile.name.trim().length > 0
-  const isStep2Valid = project.projekttitel.trim().length > 0 && 
-                       project.teaser.length <= 150 && 
-                       project.status.length > 0
+  const isStep1Valid: boolean = userProfile.name.trim().length > 0
+  const isStep2Valid: boolean = project.title.trim().length > 0 && 
+                               (project.teaser?.length || 0) <= 150 && 
+                               project.status.length > 0
 
   const renderStep = () => {
     switch (currentStep) {
@@ -229,22 +223,22 @@ export default function OnboardingPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="standort">Standort</Label>
+                <Label htmlFor="location">Standort</Label>
                 <Input
-                  id="standort"
+                  id="location"
                   placeholder="Stadt, Land"
-                  value={userProfile.standort}
-                  onChange={(e) => handleProfileChange('standort', e.target.value)}
+                  value={userProfile.location}
+                  onChange={(e) => handleProfileChange('location', e.target.value)}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="aboutMe">About me</Label>
+                <Label htmlFor="about">About me</Label>
                 <Textarea
-                  id="aboutMe"
+                  id="about"
                   placeholder="Erzähl uns von deinen Skills, Interessen und was du gerne baust..."
-                  value={userProfile.aboutMe}
-                  onChange={(e) => handleProfileChange('aboutMe', e.target.value)}
+                  value={userProfile.about}
+                  onChange={(e) => handleProfileChange('about', e.target.value)}
                   rows={4}
                 />
               </div>
@@ -263,12 +257,12 @@ export default function OnboardingPage() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="projekttitel">Projekttitel *</Label>
+                <Label htmlFor="title">Projekttitel *</Label>
                 <Input
-                  id="projekttitel"
+                  id="title"
                   placeholder="z.B. AI Chat Assistant"
-                  value={project.projekttitel}
-                  onChange={(e) => handleProjectChange('projekttitel', e.target.value)}
+                  value={project.title}
+                  onChange={(e) => handleProjectChange('title', e.target.value)}
                 />
               </div>
 
@@ -282,7 +276,7 @@ export default function OnboardingPage() {
                   rows={3}
                 />
                 <div className="text-sm text-right text-gray-500">
-                  {project.teaser.length}/150 Zeichen
+                  {(project.teaser?.length || 0)}/150 Zeichen
                 </div>
               </div>
 
@@ -293,7 +287,7 @@ export default function OnboardingPage() {
                     <div key={kategorie} className="flex items-center space-x-2">
                       <Checkbox
                         id={kategorie}
-                        checked={project.kategorien.includes(kategorie)}
+                        checked={project.categories.includes(kategorie)}
                         onCheckedChange={() => handleKategorieToggle(kategorie)}
                       />
                       <Label htmlFor={kategorie} className="text-sm">
@@ -360,13 +354,13 @@ export default function OnboardingPage() {
                     )}
                     <div>
                       <p className="font-medium">{userProfile.name || 'Nicht angegeben'}</p>
-                      {userProfile.standort && (
-                        <p className="text-sm text-gray-600 dark:text-gray-400">{userProfile.standort}</p>
+                      {userProfile.location && (
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{userProfile.location}</p>
                       )}
                     </div>
                   </div>
-                  {userProfile.aboutMe && (
-                    <p className="text-sm text-gray-700 dark:text-gray-300 mt-2">{userProfile.aboutMe}</p>
+                  {userProfile.about && (
+                    <p className="text-sm text-gray-700 dark:text-gray-300 mt-2">{userProfile.about}</p>
                   )}
                 </div>
                 
@@ -374,12 +368,12 @@ export default function OnboardingPage() {
                   <h4 className="font-semibold text-sm text-gray-600 dark:text-gray-400 uppercase tracking-wide">
                     Dein Projekt
                   </h4>
-                  <p className="font-medium">{project.projekttitel}</p>
+                  <p className="font-medium">{project.title}</p>
                   {project.teaser && (
                     <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">{project.teaser}</p>
                   )}
                   <div className="flex flex-wrap gap-1 mt-2">
-                    {project.kategorien.map((kategorie) => (
+                    {project.categories.map((kategorie: string) => (
                       <span key={kategorie} className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded">
                         {kategorie}
                       </span>
