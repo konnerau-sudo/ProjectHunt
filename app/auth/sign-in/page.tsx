@@ -61,7 +61,7 @@ export default function SignIn(): JSX.Element {
       const { error } = await supabase.auth.signInWithOtp({
         email: email.trim(),
         options: {
-          emailRedirectTo: `${window.location.origin}/onboarding`
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=/onboarding`
         }
       });
 
