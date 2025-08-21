@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { isOnboardingComplete, saveOnboardingData } from '@/lib/onboarding'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -29,6 +30,13 @@ interface Project {
 export default function OnboardingPage() {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
+
+  // Guard: redirect if onboarding already complete
+  useEffect(() => {
+    if (isOnboardingComplete()) {
+      router.push('/discover')
+    }
+  }, [])
   
   // State für User Profile (Schritt 1)
   const [userProfile, setUserProfile] = useState<UserProfile>({
@@ -117,10 +125,27 @@ export default function OnboardingPage() {
   }
 
   const handleFinish = () => {
+    // Save to localStorage
+    const profileData = {
+      name: userProfile.name,
+      standort: userProfile.standort,
+      aboutMe: userProfile.aboutMe,
+      profileImage: userProfile.profileImage ? 'uploaded' : null // Can't store File in localStorage
+    }
+    
+    const projectData = {
+      title: project.projekttitel, // Note: using 'title' as required by isOnboardingComplete
+      teaser: project.teaser,
+      kategorien: project.kategorien,
+      status: project.status
+    }
+    
+    saveOnboardingData(profileData, projectData)
+    
     // Log final state to console
     console.log('Onboarding Complete - Final Data:', {
-      userProfile,
-      project
+      userProfile: profileData,
+      project: projectData
     })
     
     // Redirect to discover

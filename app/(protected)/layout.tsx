@@ -1,4 +1,7 @@
+'use client'
+
 import NavBar from '@/src/components/NavBar';
+import OnboardingGate from '@/src/components/OnboardingGate';
 
 export default function ProtectedLayout({
   children,
@@ -8,7 +11,9 @@ export default function ProtectedLayout({
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <main className="pb-20">
-        {children}
+        <OnboardingGate>
+          {children}
+        </OnboardingGate>
       </main>
       <NavBar />
     </div>

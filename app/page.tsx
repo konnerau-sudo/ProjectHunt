@@ -1,7 +1,19 @@
+'use client'
+
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { isOnboardingComplete } from '@/lib/onboarding'
 
 export default function Home() {
+  const router = useRouter()
+  
+  useEffect(() => {
+    if (isOnboardingComplete()) {
+      router.push('/discover')
+    }
+  }, [])
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       <div className="container mx-auto px-4 flex items-center justify-center min-h-screen">

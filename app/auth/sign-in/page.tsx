@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation'
 import Link from 'next/link';
+import { isOnboardingComplete } from '@/lib/onboarding'
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,12 +11,19 @@ import { Label } from '@/components/ui/label';
 import { ArrowLeft } from 'lucide-react';
 
 export default function SignIn() {
+  const router = useRouter()
   const [email, setEmail] = useState('');
+
+  useEffect(() => {
+    if (isOnboardingComplete()) {
+      router.push('/discover')
+    }
+  }, [])
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Dummy sign in - redirect to onboarding
-    window.location.href = '/onboarding';
+    router.push('/onboarding');
   };
 
   return (
