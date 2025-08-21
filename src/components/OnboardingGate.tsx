@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { isOnboardingComplete } from '@/lib/onboarding'
+import { checkOnboardingStatus } from '@/lib/checkOnboardingStatus'
 
 interface OnboardingGateProps {
   children: React.ReactNode
@@ -14,18 +14,22 @@ export default function OnboardingGate({ children }: OnboardingGateProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [shouldRender, setShouldRender] = useState(false)
 
-  const checkOnboardingStatus = () => {
-    const isComplete = isOnboardingComplete()
+  const checkOnboardingStatusFlow = async () => {
+    const { hasProfile, user } = await checkOnboardingStatus()
     const isProtectedRoute = pathname.startsWith('/discover') || 
                            pathname.startsWith('/chats') || 
                            pathname.startsWith('/profile')
     const isOnboardingRoute = pathname === '/onboarding'
 
-    if (!isComplete && isProtectedRoute) {
+    if (!user) {
+      // Not authenticated -> redirect to sign-in
+      router.push('/auth/sign-in')
+      setShouldRender(false)
+    } else if (!hasProfile && isProtectedRoute) {
       // Not complete, trying to access protected route -> redirect to onboarding
       router.push('/onboarding')
       setShouldRender(false)
-    } else if (isComplete && isOnboardingRoute) {
+    } else if (hasProfile && isOnboardingRoute) {
       // Complete, trying to access onboarding -> redirect to discover
       router.push('/discover')
       setShouldRender(false)
@@ -39,12 +43,12 @@ export default function OnboardingGate({ children }: OnboardingGateProps) {
 
   useEffect(() => {
     // Check on mount
-    const timeout = setTimeout(checkOnboardingStatus, 100)
+    const timeout = setTimeout(checkOnboardingStatusFlow, 100)
     
-    // Check on visibility change (to catch localStorage changes in other tabs)
+    // Check on visibility change (to catch auth changes in other tabs)
     const handleVisibilityChange = () => {
       if (!document.hidden) {
-        checkOnboardingStatus()
+        checkOnboardingStatusFlow()
       }
     }
     
