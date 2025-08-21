@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,41 +9,11 @@ import { Label } from '@/components/ui/label';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
-export default function SignIn(): JSX.Element {
-  const router = useRouter();
+export default function ResetPassword(): JSX.Element {
   const [email, setEmail] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [sent, setSent] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
-
-  // Check if user is already logged in
-  useEffect(() => {
-    const checkUser = async (): Promise<void> => {
-      try {
-        const { data: { user }, error } = await supabase.auth.getUser();
-        if (user && !error) {
-          router.push('/onboarding');
-        }
-      } catch (err) {
-        console.error('Error checking user:', err);
-      }
-    };
-
-    checkUser();
-  }, [router]);
-
-  // Listen for auth state changes
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_IN' && session) {
-          router.push('/onboarding');
-        }
-      }
-    );
-
-    return () => subscription.unsubscribe();
-  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
@@ -58,12 +27,12 @@ export default function SignIn(): JSX.Element {
     setError('');
 
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email: email.trim(),
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback?next=/onboarding`
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        email.trim(),
+        {
+          redirectTo: `${window.location.origin}/auth/update-password`
         }
-      });
+      );
 
       if (error) {
         setError(error.message);
@@ -72,7 +41,7 @@ export default function SignIn(): JSX.Element {
       }
     } catch (err) {
       setError('Ein unerwarteter Fehler ist aufgetreten.');
-      console.error('Sign in error:', err);
+      console.error('Reset password error:', err);
     } finally {
       setLoading(false);
     }
@@ -85,22 +54,17 @@ export default function SignIn(): JSX.Element {
           <Card className="shadow-xl border-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
             <CardHeader className="space-y-2 text-center">
               <div className="text-4xl mb-4">📧</div>
-              <CardTitle className="text-2xl font-bold">Check deine E-Mail!</CardTitle>
+              <CardTitle className="text-2xl font-bold">Reset-Link gesendet!</CardTitle>
               <CardDescription>
-                Wir haben dir einen Magic Link an <strong>{email}</strong> gesendet.
-                Klicke auf den Link in der E-Mail, um dich anzumelden.
+                Wir haben dir einen Link zum Zurücksetzen deines Passworts an <strong>{email}</strong> gesendet.
+                Folge den Anweisungen in der E-Mail.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => {
-                  setSent(false);
-                  setEmail('');
-                }}
-              >
-                Andere E-Mail verwenden
+              <Button asChild variant="outline" className="w-full">
+                <Link href="/auth/sign-in">
+                  Zurück zur Anmeldung
+                </Link>
               </Button>
             </CardContent>
           </Card>
@@ -113,17 +77,17 @@ export default function SignIn(): JSX.Element {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
-          <Link href="/" className="flex items-center space-x-1 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
+          <Link href="/auth/sign-in" className="flex items-center space-x-1 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
             <ArrowLeft className="w-4 h-4" />
-            <span>Zurück zur Startseite</span>
+            <span>Zurück zur Anmeldung</span>
           </Link>
         </div>
         
         <Card className="shadow-xl border-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
           <CardHeader className="space-y-2">
-            <CardTitle className="text-2xl font-bold text-center">🚀 ProjectHunt</CardTitle>
+            <CardTitle className="text-2xl font-bold text-center">🔐 Passwort zurücksetzen</CardTitle>
             <CardDescription className="text-center">
-              Melde dich mit deiner E-Mail-Adresse an. Wir senden dir einen Magic Link zum Einloggen.
+              Gib deine E-Mail-Adresse ein und wir senden dir einen Link zum Zurücksetzen deines Passworts.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -153,22 +117,15 @@ export default function SignIn(): JSX.Element {
                 className="w-full h-12 text-base" 
                 disabled={loading}
               >
-                {loading ? 'Wird gesendet...' : 'Magic Link senden'}
+                {loading ? 'Wird gesendet...' : 'Reset-Link senden'}
               </Button>
             </form>
             
-            <div className="mt-6 space-y-3 text-center text-sm text-gray-500 dark:text-gray-400">
-              <div>
-                Noch kein Konto?{' '}
-                <Link href="/auth/sign-up" className="text-blue-600 dark:text-blue-400 hover:underline">
-                  Jetzt registrieren
-                </Link>
-              </div>
-              <div>
-                <Link href="/auth/reset-password" className="text-blue-600 dark:text-blue-400 hover:underline">
-                  Passwort vergessen?
-                </Link>
-              </div>
+            <div className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
+              Erinnerst du dich wieder?{' '}
+              <Link href="/auth/sign-in" className="text-blue-600 dark:text-blue-400 hover:underline">
+                Zur Anmeldung
+              </Link>
             </div>
           </CardContent>
         </Card>
