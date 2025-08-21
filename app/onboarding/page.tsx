@@ -173,22 +173,28 @@ export default function OnboardingPage(): JSX.Element {
         status: project.status
       }
       
-      // Save to database via API routes (more reliable than Server Actions)
+      // Save to database via API routes (with credentials for session cookies)
       const profileResponse = await fetch('/api/auth/bootstrap-profile', {
         method: 'POST',
+        credentials: 'include', // ← WICHTIG: Cookies mitschicken für Supabase Session
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(profileData)
+        body: JSON.stringify({
+          name: userProfile.name,
+          location: userProfile.location || null,
+          about: userProfile.about || null
+        })
       })
 
       if (!profileResponse.ok) {
-        const profileError = await profileResponse.json()
-        throw new Error(`Profile creation failed: ${profileError.error}`)
+        const errorMessage = await profileResponse.text().catch(() => profileResponse.statusText)
+        throw new Error(`Profile creation failed: ${errorMessage || profileResponse.statusText}`)
       }
 
       const projectResponse = await fetch('/api/projects/create', {
         method: 'POST',
+        credentials: 'include', // ← WICHTIG: Cookies mitschicken für Supabase Session
         headers: {
           'Content-Type': 'application/json'
         },
@@ -196,8 +202,8 @@ export default function OnboardingPage(): JSX.Element {
       })
 
       if (!projectResponse.ok) {
-        const projectError = await projectResponse.json()
-        throw new Error(`Project creation failed: ${projectError.error}`)
+        const errorMessage = await projectResponse.text().catch(() => projectResponse.statusText)
+        throw new Error(`Project creation failed: ${errorMessage || projectResponse.statusText}`)
       }
       
       // Save to localStorage for client-side checks

@@ -1,59 +1,40 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
 
-export async function POST(request: NextRequest) {
-  try {
-    const supabase = createSupabaseServer();
-    
-    // Get authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' }, 
-        { status: 401 }
-      );
-    }
+export async function POST(req: Request) {
+  // Create fresh Supabase server client for this request
+  const supabase = createSupabaseServer();
 
-    // Parse request body
-    const body = await request.json();
-    const { name, location } = body;
-
-    if (!name || typeof name !== 'string') {
-      return NextResponse.json(
-        { error: 'Name is required' }, 
-        { status: 400 }
-      );
-    }
-
-    // Upsert profile
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .upsert({
-        id: user.id,
-        name: name.trim(),
-        location: location ? location.trim() : null,
-        updated_at: new Date().toISOString()
-      });
-
-    if (profileError) {
-      console.error('Profile upsert error:', profileError);
-      return NextResponse.json(
-        { error: 'Failed to create profile' }, 
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({ 
-      success: true,
-      message: 'Profile created successfully' 
-    });
-
-  } catch (error) {
-    console.error('Bootstrap profile error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' }, 
-      { status: 500 }
-    );
+  // Get authenticated user from session cookies
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    return new NextResponse('Unauthorized', { status: 401 });
   }
+
+  // Parse request body with error handling
+  const { name, location, about } = await req.json().catch(() => ({}));
+
+  if (!name || typeof name !== 'string') {
+    return new NextResponse('Name required', { status: 400 });
+  }
+
+  // Upsert profile with explicit user.id constraint
+  const { error } = await supabase
+    .from('profiles')
+    .upsert({ 
+      id: user.id, 
+      name: name.trim(), 
+      location: location ? location.trim() : null, 
+      about: about ? about.trim() : null,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', user.id);
+
+  if (error) {
+    console.error('Profile upsert error:', error);
+    return new NextResponse(error.message, { status: 400 });
+  }
+
+  return NextResponse.json({ ok: true });
 }
