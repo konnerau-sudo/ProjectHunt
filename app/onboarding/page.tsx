@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { isOnboardingComplete, saveOnboardingData } from '@/lib/onboarding'
 import { UserProfile, Project, Collab, CATEGORIES } from '@/src/types/projecthunt'
+import { upsertProfile, createProject } from './actions'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -119,31 +120,47 @@ export default function OnboardingPage(): JSX.Element {
     }
   }
 
-  const handleFinish = (): void => {
-    // Save to localStorage
-    const profileData = {
-      name: userProfile.name,
-      location: userProfile.location,
-      about: userProfile.about
+  const handleFinish = async (): Promise<void> => {
+    // Validation
+    if (!userProfile.name.trim() || !project.title.trim()) {
+      alert('Bitte fülle alle Pflichtfelder aus.')
+      return
     }
-    
-    const projectData = {
-      title: project.title,
-      teaser: project.teaser,
-      categories: project.categories,
-      status: project.status
+
+    try {
+      // Prepare data
+      const profileData = {
+        name: userProfile.name,
+        location: userProfile.location,
+        about: userProfile.about
+      }
+      
+      const projectData = {
+        title: project.title,
+        teaser: project.teaser,
+        categories: project.categories,
+        status: project.status
+      }
+      
+      // Save to database
+      await upsertProfile(profileData)
+      await createProject(projectData)
+      
+      // Save to localStorage for client-side checks
+      saveOnboardingData(profileData, projectData)
+      
+      // Log final state to console
+      console.log('Onboarding Complete - Saved to DB:', {
+        userProfile: profileData,
+        project: projectData
+      })
+      
+      // Redirect to discover
+      router.push('/discover')
+    } catch (error) {
+      console.error('Onboarding error:', error)
+      alert('Fehler beim Speichern. Bitte versuche es erneut.')
     }
-    
-    saveOnboardingData(profileData, projectData)
-    
-    // Log final state to console
-    console.log('Onboarding Complete - Final Data:', {
-      userProfile: profileData,
-      project: projectData
-    })
-    
-    // Redirect to discover
-    router.push('/discover')
   }
 
   // Validation
