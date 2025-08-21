@@ -93,8 +93,6 @@ export default function OnboardingPage() {
                        project.status.length > 0
 
   const renderStep = () => {
-    console.log('Current step:', currentStep) // Debug log
-    
     switch (currentStep) {
       case 1:
         return (
@@ -292,9 +290,6 @@ export default function OnboardingPage() {
         </div>
 
         {/* Step Content */}
-        <div className="mb-4 p-2 bg-blue-100 text-blue-800 rounded text-sm">
-          Debug: Current Step = {currentStep}
-        </div>
         {renderStep()}
 
         {/* Navigation */}
