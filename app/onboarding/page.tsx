@@ -15,6 +15,8 @@ interface UserProfile {
   name: string
   standort: string
   aboutMe: string
+  profileImage: File | null
+  profileImagePreview: string | null
 }
 
 interface Project {
@@ -32,7 +34,9 @@ export default function OnboardingPage() {
   const [userProfile, setUserProfile] = useState<UserProfile>({
     name: '',
     standort: '',
-    aboutMe: ''
+    aboutMe: '',
+    profileImage: null,
+    profileImagePreview: null
   })
 
   // State für Project (Schritt 2)
@@ -48,6 +52,43 @@ export default function OnboardingPage() {
 
   const handleProfileChange = (field: keyof UserProfile, value: string) => {
     setUserProfile(prev => ({ ...prev, [field]: value }))
+  }
+
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      // Check file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Bild ist zu groß. Maximal 5MB erlaubt.')
+        return
+      }
+      
+      // Check file type
+      if (!file.type.startsWith('image/')) {
+        alert('Bitte wähle eine Bilddatei aus.')
+        return
+      }
+      
+      // Create preview URL
+      const previewUrl = URL.createObjectURL(file)
+      
+      setUserProfile(prev => ({
+        ...prev,
+        profileImage: file,
+        profileImagePreview: previewUrl
+      }))
+    }
+  }
+
+  const removeImage = () => {
+    if (userProfile.profileImagePreview) {
+      URL.revokeObjectURL(userProfile.profileImagePreview)
+    }
+    setUserProfile(prev => ({
+      ...prev,
+      profileImage: null,
+      profileImagePreview: null
+    }))
   }
 
   const handleProjectChange = (field: keyof Project, value: string | string[]) => {
@@ -104,6 +145,54 @@ export default function OnboardingPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Profile Image Upload */}
+              <div className="space-y-2">
+                <Label>Profilbild (optional)</Label>
+                <div className="flex items-center space-x-4">
+                  {userProfile.profileImagePreview ? (
+                    <div className="relative">
+                      <img
+                        src={userProfile.profileImagePreview}
+                        alt="Profile preview"
+                        className="w-20 h-20 rounded-full object-cover border-2 border-gray-200"
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="destructive"
+                        className="absolute -top-2 -right-2 w-6 h-6 rounded-full p-0"
+                        onClick={removeImage}
+                      >
+                        ×
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="w-20 h-20 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center border-2 border-dashed border-gray-300">
+                      <span className="text-2xl text-gray-400">👤</span>
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <input
+                      type="file"
+                      id="profileImage"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => document.getElementById('profileImage')?.click()}
+                    >
+                      Bild auswählen
+                    </Button>
+                    <p className="text-xs text-gray-500 mt-1">
+                      JPG, PNG oder GIF (max. 5MB)
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="name">Name</Label>
                 <Input
@@ -232,10 +321,25 @@ export default function OnboardingPage() {
                   <h4 className="font-semibold text-sm text-gray-600 dark:text-gray-400 uppercase tracking-wide">
                     Dein Profil
                   </h4>
-                  <p className="font-medium">{userProfile.name || 'Nicht angegeben'}</p>
-                  {userProfile.standort && (
-                    <p className="text-sm text-gray-600 dark:text-gray-400">{userProfile.standort}</p>
-                  )}
+                  <div className="flex items-center space-x-3 mt-2">
+                    {userProfile.profileImagePreview ? (
+                      <img
+                        src={userProfile.profileImagePreview}
+                        alt="Profile"
+                        className="w-12 h-12 rounded-full object-cover border-2 border-gray-200"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
+                        <span className="text-gray-400">👤</span>
+                      </div>
+                    )}
+                    <div>
+                      <p className="font-medium">{userProfile.name || 'Nicht angegeben'}</p>
+                      {userProfile.standort && (
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{userProfile.standort}</p>
+                      )}
+                    </div>
+                  </div>
                   {userProfile.aboutMe && (
                     <p className="text-sm text-gray-700 dark:text-gray-300 mt-2">{userProfile.aboutMe}</p>
                   )}
