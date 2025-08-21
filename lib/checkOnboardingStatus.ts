@@ -17,16 +17,17 @@ export async function checkOnboardingStatus(): Promise<{
       return { hasProfile: false, user: null, error: 'Not authenticated' };
     }
 
-    // Check if profile exists
+    // Check if profile exists - with better error handling
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('id, name')
       .eq('id', user.id)
-      .single();
+      .maybeSingle(); // Use maybeSingle instead of single to handle no rows gracefully
 
     if (profileError) {
-      // If error is "PGRST116" (no rows), user hasn't completed onboarding
-      if (profileError.code === 'PGRST116') {
+      console.error('Profile check error:', profileError);
+      // For 406 errors or table issues, assume no profile exists
+      if (profileError.code === 'PGRST116' || profileError.message?.includes('406') || profileError.message?.includes('Not Acceptable')) {
         return { hasProfile: false, user };
       }
       return { hasProfile: false, user, error: profileError.message };
