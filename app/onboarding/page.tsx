@@ -150,16 +150,51 @@ export default function OnboardingPage(): JSX.Element {
     }
 
     try {
-      // Auth check before calling Server Actions
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
-      
-      if (authError || !user) {
-        console.error('Auth error before Server Actions:', authError)
+      // 1) Muss eingeloggt sein
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        alert('Du bist nicht angemeldet. Bitte melde dich erneut an.')
         router.push('/auth/sign-in')
         return
       }
 
-      // Prepare data
+      // 2) Profil upserten (Client → Supabase; RLS prüft auth.uid())
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: user.id,
+          name: userProfile.name,
+          location: userProfile.location || null,
+          about: userProfile.about || null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id)
+
+      if (profileError) {
+        console.error('Profile upsert failed:', profileError)
+        alert('Fehler beim Speichern des Profils. Bitte versuche es erneut.')
+        return
+      }
+
+      // 3) Projekt anlegen
+      const { error: projectError } = await supabase
+        .from('projects')
+        .insert({
+          owner_id: user.id,
+          title: project.title,
+          teaser: project.teaser || null,
+          categories: project.categories || [],
+          status: project.status, // 'offen' | 'suche_hilfe' | 'biete_hilfe'
+          created_at: new Date().toISOString()
+        })
+
+      if (projectError) {
+        console.error('Project insert failed:', projectError)
+        alert('Fehler beim Speichern des Projekts. Bitte versuche es erneut.')
+        return
+      }
+
+      // 4) Save to localStorage for client-side checks
       const profileData = {
         name: userProfile.name,
         location: userProfile.location,
@@ -173,50 +208,16 @@ export default function OnboardingPage(): JSX.Element {
         status: project.status
       }
       
-      // Save to database via API routes (with credentials for session cookies)
-      const profileResponse = await fetch('/api/auth/bootstrap-profile', {
-        method: 'POST',
-        credentials: 'include', // ← WICHTIG: Cookies mitschicken für Supabase Session
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          name: userProfile.name,
-          location: userProfile.location || null,
-          about: userProfile.about || null
-        })
-      })
-
-      if (!profileResponse.ok) {
-        const errorMessage = await profileResponse.text().catch(() => profileResponse.statusText)
-        throw new Error(`Profile creation failed: ${errorMessage || profileResponse.statusText}`)
-      }
-
-      const projectResponse = await fetch('/api/projects/create', {
-        method: 'POST',
-        credentials: 'include', // ← WICHTIG: Cookies mitschicken für Supabase Session
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(projectData)
-      })
-
-      if (!projectResponse.ok) {
-        const errorMessage = await projectResponse.text().catch(() => projectResponse.statusText)
-        throw new Error(`Project creation failed: ${errorMessage || projectResponse.statusText}`)
-      }
-      
-      // Save to localStorage for client-side checks
       saveOnboardingData(profileData, projectData)
       
-      // Log final state to console
-      console.log('Onboarding Complete - Saved to DB:', {
+      // Log successful completion
+      console.log('Onboarding Complete - Saved to DB via Client:', {
         userProfile: profileData,
         project: projectData,
         userId: user.id
       })
       
-      // Redirect to discover
+      // 5) Weiter zu Discover
       router.push('/discover')
     } catch (error) {
       console.error('Onboarding error:', error)
