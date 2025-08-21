@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
+import { checkOnboardingStatus, getPostLoginRedirect } from '@/lib/checkOnboardingStatus';
 
 type SignInForm = {
   email: string;
@@ -30,13 +31,14 @@ export default function SignIn(): JSX.Element {
   const [showMagicLink, setShowMagicLink] = useState<boolean>(false);
   const [magicLinkSent, setMagicLinkSent] = useState<boolean>(false);
 
-  // Check if user is already logged in
+  // Check if user is already logged in and redirect appropriately
   useEffect(() => {
     const checkUser = async (): Promise<void> => {
       try {
-        const { data: { user }, error } = await supabase.auth.getUser();
-        if (user && !error) {
-          router.push('/onboarding');
+        const { hasProfile, user } = await checkOnboardingStatus();
+        if (user) {
+          const redirectTo = getPostLoginRedirect(hasProfile);
+          router.push(redirectTo);
         }
       } catch (err) {
         console.error('Error checking user:', err);
@@ -51,7 +53,10 @@ export default function SignIn(): JSX.Element {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === 'SIGNED_IN' && session) {
-          router.push('/onboarding');
+          // Check onboarding status and redirect appropriately
+          const { hasProfile } = await checkOnboardingStatus();
+          const redirectTo = getPostLoginRedirect(hasProfile);
+          router.push(redirectTo);
         }
       }
     );
@@ -99,8 +104,10 @@ export default function SignIn(): JSX.Element {
           setError(error.message);
         }
       } else if (data?.session) {
-        // Successfully signed in
-        router.push('/onboarding');
+        // Successfully signed in - check onboarding status
+        const { hasProfile } = await checkOnboardingStatus();
+        const redirectTo = getPostLoginRedirect(hasProfile);
+        router.push(redirectTo);
       }
     } catch (err) {
       setError('Ein unerwarteter Fehler ist aufgetreten.');

@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { checkOnboardingStatus, getPostLoginRedirect } from '@/lib/checkOnboardingStatus';
 
 export default function SignUp(): JSX.Element {
   const router = useRouter();
@@ -28,9 +29,10 @@ export default function SignUp(): JSX.Element {
   useEffect(() => {
     const checkUser = async (): Promise<void> => {
       try {
-        const { data: { user }, error } = await supabase.auth.getUser();
-        if (user && !error) {
-          router.push('/onboarding');
+        const { hasProfile, user } = await checkOnboardingStatus();
+        if (user) {
+          const redirectTo = getPostLoginRedirect(hasProfile);
+          router.push(redirectTo);
         }
       } catch (err) {
         console.error('Error checking user:', err);
@@ -104,6 +106,7 @@ export default function SignUp(): JSX.Element {
           // Continue anyway - profile will be created in onboarding
         }
         
+        // After successful registration, always go to onboarding
         router.push('/onboarding');
       } else {
         // Email confirmation required
