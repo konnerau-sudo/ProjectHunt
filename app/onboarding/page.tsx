@@ -389,7 +389,7 @@ export default function OnboardingPage() {
                 </div>
               </div>
               
-              <Button onClick={handleFinish} className="w-full" size="lg">
+              <Button type="button" onClick={handleFinish} className="w-full" size="lg">
                 Los geht's
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
@@ -425,6 +425,7 @@ export default function OnboardingPage() {
         {currentStep < 3 && (
           <div className="flex justify-between mt-6">
             <Button
+              type="button"
               variant="outline"
               onClick={handleBack}
               disabled={currentStep === 1}
@@ -434,6 +435,7 @@ export default function OnboardingPage() {
             </Button>
             
             <Button
+              type="button"
               onClick={handleNext}
               disabled={
                 (currentStep === 1 && !isStep1Valid) ||

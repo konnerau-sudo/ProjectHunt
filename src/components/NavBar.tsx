@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Compass, MessageCircle, User, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import SignOutButton from '@/components/auth/SignOutButton';
 
 const navItems = [
   {
@@ -26,11 +27,6 @@ const navItems = [
 
 export default function NavBar() {
   const pathname = usePathname();
-
-  const handleSignOut = () => {
-    // Dummy sign out - redirect to home
-    window.location.href = '/';
-  };
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 safe-area-pb">
@@ -59,15 +55,10 @@ export default function NavBar() {
             })}
           </div>
           
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleSignOut}
-            className="flex items-center space-x-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-          >
+          <div className="flex items-center space-x-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
             <LogOut className="w-4 h-4" />
-            <span className="text-xs">Sign out</span>
-          </Button>
+            <SignOutButton />
+          </div>
         </div>
       </div>
     </nav>
