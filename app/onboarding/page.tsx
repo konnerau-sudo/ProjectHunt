@@ -143,88 +143,86 @@ export default function OnboardingPage(): JSX.Element {
   }
 
   const handleFinish = async (): Promise<void> => {
-    // Validation
-    if (!userProfile.name.trim() || !project.title.trim()) {
-      alert('Bitte fülle alle Pflichtfelder aus.')
+    // 1) Auth prüfen
+    const { data: { user }, error: authErr } = await supabase.auth.getUser()
+    if (authErr) { 
+      console.error('auth error', authErr)
+      return
+    }
+    if (!user) { 
+      router.push('/auth/sign-in')
       return
     }
 
-    try {
-      // 1) Muss eingeloggt sein
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        alert('Du bist nicht angemeldet. Bitte melde dich erneut an.')
-        router.push('/auth/sign-in')
-        return
-      }
-
-      // 2) Profil upserten (Client → Supabase; RLS prüft auth.uid())
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert(
-          {
-            id: user.id,
-            name: userProfile.name,
-            location: userProfile.location || null,
-            about: userProfile.about || null,
-            updated_at: new Date().toISOString()
-          },
-          { onConflict: 'id', ignoreDuplicates: false } // wichtig: Konfliktspalte angeben
-        )
-
-      if (profileError) {
-        console.error('Profile upsert failed:', profileError)
-        alert('Fehler beim Speichern des Profils. Bitte versuche es erneut.')
-        return
-      }
-
-      // 3) Projekt anlegen
-      const { error: projectError } = await supabase
-        .from('projects')
-        .insert({
-          owner_id: user.id,
-          title: project.title,
-          teaser: project.teaser || null,
-          categories: project.categories || [],
-          status: project.status, // 'offen' | 'suche_hilfe' | 'biete_hilfe'
-          created_at: new Date().toISOString()
-        })
-
-      if (projectError) {
-        console.error('Project insert failed:', projectError)
-        alert('Fehler beim Speichern des Projekts. Bitte versuche es erneut.')
-        return
-      }
-
-      // 4) Save to localStorage for client-side checks
-      const profileData = {
-        name: userProfile.name,
-        location: userProfile.location,
-        about: userProfile.about
-      }
-      
-      const projectData = {
-        title: project.title,
-        teaser: project.teaser,
-        categories: project.categories,
-        status: project.status
-      }
-      
-      saveOnboardingData(profileData, projectData)
-      
-      // Log successful completion
-      console.log('Onboarding Complete - Saved to DB via Client:', {
-        userProfile: profileData,
-        project: projectData,
-        userId: user.id
-      })
-      
-      // 5) Weiter zu Discover
-      router.push('/discover')
-    } catch (error) {
-      console.error('Onboarding error:', error)
-      alert('Fehler beim Speichern. Bitte versuche es erneut.')
+    // 2) VALIDIERUNG (Minimal)
+    if (!userProfile.name?.trim()) { 
+      alert('Bitte Name eingeben.')
+      return
     }
+    if (!project.title?.trim()) { 
+      alert('Bitte Projekttitel eingeben.')
+      return
+    }
+
+    // 3) PROFILE upsert (ohne .eq, mit onConflict)
+    const { error: pErr } = await supabase
+      .from('profiles')
+      .upsert(
+        {
+          id: user.id,
+          name: userProfile.name.trim(),
+          location: userProfile.location?.trim() ?? null,
+          about: userProfile.about?.trim() ?? null,
+        },
+        { onConflict: 'id' }
+      )
+    if (pErr) { 
+      console.error('Profile upsert failed', pErr)
+      alert('Profil konnte nicht gespeichert werden.')
+      return
+    }
+
+    // 4) PROJECT insert (achte auf gültige Werte)
+    const payload = {
+      owner_id: user.id,
+      title: project.title.trim(),
+      teaser: project.teaser?.trim() ?? null,
+      categories: Array.isArray(project.categories) ? project.categories : [],
+      status: project.status as 'offen' | 'suche_hilfe' | 'biete_hilfe',
+    }
+
+    const { error: prErr } = await supabase.from('projects').insert(payload)
+    if (prErr) { 
+      console.error('Project insert failed', prErr)
+      alert('Projekt konnte nicht gespeichert werden.')
+      return
+    }
+
+    // 5) Save to localStorage for client-side checks
+    const profileData = {
+      name: userProfile.name.trim(),
+      location: userProfile.location?.trim() || undefined,
+      about: userProfile.about?.trim() || undefined
+    }
+    
+    const projectData = {
+      title: project.title.trim(),
+      teaser: project.teaser?.trim() || undefined,
+      categories: Array.isArray(project.categories) ? project.categories : [],
+      status: project.status
+    }
+    
+    saveOnboardingData(profileData, projectData)
+    
+    // Log successful completion
+    console.log('Onboarding Complete - Saved to DB via Client:', {
+      userProfile: profileData,
+      project: projectData,
+      userId: user.id
+    })
+
+    // 6) Erfolg -> weiter
+    router.push('/discover')
   }
 
   // Validation
