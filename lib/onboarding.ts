@@ -1,4 +1,4 @@
-import { UserProfile, Project } from '@/src/types/projecthunt';
+import { UserProfile, Project } from '@/types/projecthunt';
 
 export const LS_KEYS = {
   profile: 'ph.profile',

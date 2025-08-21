@@ -1,7 +1,7 @@
 'use server'
 
 import { createSupabaseServer } from '@/lib/supabase/server'
-import { UserProfile, Project } from '@/src/types/projecthunt'
+import { UserProfile, Project } from '@/types/projecthunt'
 
 export async function upsertProfile(profileData: {
   name: string

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { isOnboardingComplete, saveOnboardingData } from '@/lib/onboarding'
-import { UserProfile, Project, Collab, CATEGORIES } from '@/src/types/projecthunt'
+import { UserProfile, Project, Collab, CATEGORIES } from '@/types/projecthunt'
 import { upsertProfile, createProject } from './actions'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
