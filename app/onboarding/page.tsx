@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { isOnboardingComplete, saveOnboardingData } from '@/lib/onboarding'
 import { UserProfile, Project, Collab, CATEGORIES } from '@/types/projecthunt'
 import { upsertProfile, createProject } from './actions'
+import { supabase } from '@/lib/supabaseClient'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -26,13 +27,34 @@ interface OnboardingProject extends Omit<Project, 'id' | 'owner_id' | 'created_a
 export default function OnboardingPage(): JSX.Element {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState<number>(1)
+  const [authLoading, setAuthLoading] = useState<boolean>(true)
 
-  // Guard: redirect if onboarding already complete
+  // Auth guard: redirect if not authenticated
   useEffect(() => {
-    if (isOnboardingComplete()) {
-      router.push('/discover')
+    const checkAuth = async (): Promise<void> => {
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser()
+        
+        if (error || !user) {
+          router.replace('/auth/sign-in')
+          return
+        }
+
+        // If authenticated, check if onboarding is already complete
+        if (isOnboardingComplete()) {
+          router.push('/discover')
+          return
+        }
+
+        setAuthLoading(false)
+      } catch (err) {
+        console.error('Auth check error:', err)
+        router.replace('/auth/sign-in')
+      }
     }
-  }, [])
+
+    checkAuth()
+  }, [router])
   
   // State für User Profile (Schritt 1)
   const [userProfile, setUserProfile] = useState<OnboardingUserProfile>({
@@ -128,6 +150,15 @@ export default function OnboardingPage(): JSX.Element {
     }
 
     try {
+      // Auth check before calling Server Actions
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      
+      if (authError || !user) {
+        console.error('Auth error before Server Actions:', authError)
+        router.push('/auth/sign-in')
+        return
+      }
+
       // Prepare data
       const profileData = {
         name: userProfile.name,
@@ -142,7 +173,7 @@ export default function OnboardingPage(): JSX.Element {
         status: project.status
       }
       
-      // Save to database
+      // Save to database (Server Actions now have authenticated user)
       await upsertProfile(profileData)
       await createProject(projectData)
       
@@ -152,7 +183,8 @@ export default function OnboardingPage(): JSX.Element {
       // Log final state to console
       console.log('Onboarding Complete - Saved to DB:', {
         userProfile: profileData,
-        project: projectData
+        project: projectData,
+        userId: user.id
       })
       
       // Redirect to discover
@@ -168,6 +200,19 @@ export default function OnboardingPage(): JSX.Element {
   const isStep2Valid: boolean = project.title.trim().length > 0 && 
                                (project.teaser?.length || 0) <= 150 && 
                                project.status.length > 0
+
+  // Show loading while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-4xl mb-4">🔐</div>
+          <h2 className="text-xl font-semibold mb-2">Authentifizierung prüfen...</h2>
+          <p className="text-gray-600 dark:text-gray-400">Einen Moment bitte.</p>
+        </div>
+      </div>
+    )
+  }
 
   const renderStep = () => {
     switch (currentStep) {

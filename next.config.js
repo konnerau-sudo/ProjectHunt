@@ -6,7 +6,7 @@ const nextConfig = {
   images: { unoptimized: true },
   experimental: {
     serverActions: {
-      allowedOrigins: ['localhost:3000'],
+      allowedOrigins: ['localhost:3000', 'http://localhost:3000'],
       bodySizeLimit: '2mb'
     }
   }
