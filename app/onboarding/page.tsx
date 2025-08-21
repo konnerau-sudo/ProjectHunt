@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { isOnboardingComplete, saveOnboardingData } from '@/lib/onboarding'
 import { UserProfile, Project, Collab, CATEGORIES } from '@/types/projecthunt'
-import { upsertProfile, createProject } from './actions'
+// Removed server actions import - using API routes instead
 import { supabase } from '@/lib/supabaseClient'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -173,9 +173,32 @@ export default function OnboardingPage(): JSX.Element {
         status: project.status
       }
       
-      // Save to database (Server Actions now have authenticated user)
-      await upsertProfile(profileData)
-      await createProject(projectData)
+      // Save to database via API routes (more reliable than Server Actions)
+      const profileResponse = await fetch('/api/auth/bootstrap-profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(profileData)
+      })
+
+      if (!profileResponse.ok) {
+        const profileError = await profileResponse.json()
+        throw new Error(`Profile creation failed: ${profileError.error}`)
+      }
+
+      const projectResponse = await fetch('/api/projects/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(projectData)
+      })
+
+      if (!projectResponse.ok) {
+        const projectError = await projectResponse.json()
+        throw new Error(`Project creation failed: ${projectError.error}`)
+      }
       
       // Save to localStorage for client-side checks
       saveOnboardingData(profileData, projectData)
