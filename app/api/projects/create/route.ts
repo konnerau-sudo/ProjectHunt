@@ -3,7 +3,7 @@ import { createSupabaseServer } from '@/lib/supabase/server';
 
 export async function POST(req: Request) {
   // Create fresh Supabase server client for this request
-  const supabase = createSupabaseServer();
+  const supabase = await createSupabaseServer();
 
   // Get authenticated user from session cookies
   const { data: { user } } = await supabase.auth.getUser();
