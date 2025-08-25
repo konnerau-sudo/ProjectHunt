@@ -30,3 +30,9 @@ Thumbs.db
 
 # Vercel
 .vercel/
+
+# Tailwind
+*.css.map
+tailwind.css
+tailwind-output.css
+.tailwind/

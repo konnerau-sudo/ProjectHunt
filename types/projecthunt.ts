@@ -42,5 +42,10 @@ export type Message = {
   created_at?: string;
 };
 
-export const CATEGORIES = ['FinTech','EdTech','DevTools','Healthcare','E-Commerce','AI'] as const;
+export const CATEGORIES = [
+  'FinTech', 'EdTech', 'DevTools', 'Healthcare', 'E-Commerce', 'AI', 
+  'Design', 'Marketing', 'Mobile App', 'Web App', 'Gaming', 'Social Media',
+  'Produktivität', 'Umwelt', 'Food', 'Nachhaltigkeit', 'IoT', 'Blockchain',
+  'VR/AR', 'Content Creation', 'Fitness', 'Travel', 'Music', 'Photo/Video'
+] as const;
 export type Category = typeof CATEGORIES[number];

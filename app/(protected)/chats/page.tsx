@@ -1,222 +1,158 @@
 'use client';
 
-import { useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { User, MessageCircle, Heart, Clock } from 'lucide-react';
-import { toast } from 'sonner';
-import Link from 'next/link';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { ConversationsList } from '@/components/chat/ConversationsList';
+import { ChatThread } from '@/components/chat/ChatThread';
+import { cn } from '@/lib/utils';
 
-// Mock data
-const mockMatches = [
+// Mock data for conversations
+const mockConversations = [
   {
     id: '1',
-    other: {
+    participant: {
       name: 'Sarah Weber',
-      avatarUrl: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2'
+      avatarUrl: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2',
+      isOnline: true,
+      project: 'EcoTracker App'
     },
-    lastMessage: 'Hey! Dein EcoTracker Projekt klingt super spannend. Wie kann ich helfen?'
+    lastMessage: {
+      content: 'Hey! Dein EcoTracker Projekt klingt super spannend. Wie kann ich helfen?',
+      timestamp: new Date(Date.now() - 1000 * 60 * 15), // 15 min ago
+      isRead: false,
+      senderId: '2'
+    },
+    unreadCount: 2,
+    isPinned: false
   },
   {
     id: '2',
-    other: {
+    participant: {
       name: 'Max Müller',
-      avatarUrl: 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2'
+      avatarUrl: 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2',
+      isOnline: false,
+      project: 'AI Code Review Bot'
     },
-    lastMessage: 'Danke für das Like! Lass uns über die AI Integration sprechen.'
-  }
-];
-
-const mockMyLikes = [
-  {
-    id: '1',
-    projectName: 'Local Food Network'
+    lastMessage: {
+      content: 'Danke für das Like! Lass uns über die AI Integration sprechen.',
+      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
+      isRead: true,
+      senderId: '1'
+    },
+    unreadCount: 0,
+    isPinned: true
   },
   {
-    id: '2',
-    projectName: 'Fitness Buddy App'
-  }
-];
-
-const mockReceivedLikes = [
-  {
-    id: '1',
-    projectName: 'EcoTracker App',
-    user: {
+    id: '3',
+    participant: {
       name: 'Anna Schmidt',
-      avatarUrl: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2'
-    }
+      avatarUrl: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2',
+      isOnline: true,
+      project: 'Local Food Network'
+    },
+    lastMessage: {
+      content: 'Perfekt! Ich schicke dir morgen das Design-Mockup.',
+      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
+      isRead: true,
+      senderId: '1'
+    },
+    unreadCount: 0,
+    isPinned: false
   },
   {
-    id: '2',
-    projectName: 'AI Code Review Bot',
-    user: {
+    id: '4',
+    participant: {
       name: 'Tom Fischer',
-      avatarUrl: 'https://images.pexels.com/photos/1681010/pexels-photo-1681010.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2'
-    }
+      avatarUrl: 'https://images.pexels.com/photos/1681010/pexels-photo-1681010.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2',
+      isOnline: false,
+      project: 'Fitness Buddy App'
+    },
+    lastMessage: {
+      content: 'Super! Wann können wir das erste Meeting machen?',
+      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48), // 2 days ago
+      isRead: true,
+      senderId: '2'
+    },
+    unreadCount: 0,
+    isPinned: false
+  },
+  {
+    id: '5',
+    participant: {
+      name: 'Lisa Bauer',
+      avatarUrl: 'https://images.pexels.com/photos/1130626/pexels-photo-1130626.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2',
+      isOnline: true,
+      project: 'Smart Home Dashboard'
+    },
+    lastMessage: {
+      content: 'Ich hätte noch eine Idee für das Backend...',
+      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 72), // 3 days ago
+      isRead: true,
+      senderId: '1'
+    },
+    unreadCount: 0,
+    isPinned: false
   }
 ];
 
 export default function Chats() {
-  const [matches] = useState(mockMatches);
-  const [myLikes] = useState(mockMyLikes);
-  const [receivedLikes, setReceivedLikes] = useState(mockReceivedLikes);
+  const searchParams = useSearchParams();
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const [isMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
 
-  const handleLikeBack = (likeId: string, userName: string) => {
-    toast.success('Liked back!');
-    // In a real app, this would create a match and remove from received likes
-    setReceivedLikes(prev => prev.filter(like => like.id !== likeId));
-  };
+  // Handle URL parameter for initial conversation selection
+  useEffect(() => {
+    const conversationParam = searchParams.get('conversation');
+    if (conversationParam && mockConversations.find(conv => conv.id === conversationParam)) {
+      setSelectedConversationId(conversationParam);
+    }
+  }, [searchParams]);
+  
+  const selectedConversation = mockConversations.find(conv => conv.id === selectedConversationId);
+  const showThread = selectedConversationId && selectedConversation;
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold mb-2">Messages</h1>
-          <p className="text-gray-600 dark:text-gray-300">
-            Connect and collaborate with creators
-          </p>
-        </div>
+    <div className="h-[calc(100vh-5rem)] flex bg-white dark:bg-gray-900">
+      {/* Conversations List - Hidden on mobile when thread is open */}
+      <div className={cn(
+        "w-full md:w-96 md:border-r border-gray-200 dark:border-gray-700 flex-shrink-0",
+        showThread && isMobile && "hidden"
+      )}>
+        <ConversationsList
+          conversations={mockConversations}
+          selectedId={selectedConversationId}
+          onSelectConversation={setSelectedConversationId}
+        />
+      </div>
 
-        <Tabs defaultValue="matches" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-8">
-            <TabsTrigger value="matches" className="flex items-center space-x-2">
-              <MessageCircle className="w-4 h-4" />
-              <span>Matches</span>
-            </TabsTrigger>
-            <TabsTrigger value="my-likes" className="flex items-center space-x-2">
-              <Heart className="w-4 h-4" />
-              <span>Meine Likes</span>
-            </TabsTrigger>
-            <TabsTrigger value="received-likes" className="flex items-center space-x-2">
-              <Clock className="w-4 h-4" />
-              <span>Erhaltene Likes</span>
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Matches Tab */}
-          <TabsContent value="matches" className="space-y-4">
-            {matches.length === 0 ? (
-              <div className="text-center py-16">
-                <MessageCircle className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-600 dark:text-gray-300 mb-2">
-                  Noch keine Matches
-                </h3>
-                <p className="text-gray-500 dark:text-gray-400">
-                  Swipe durch Projekte, um deine ersten Matches zu finden!
-                </p>
+      {/* Chat Thread - Takes full width on mobile, right side on desktop */}
+      <div className={cn(
+        "flex-1 flex flex-col",
+        !showThread && "hidden md:flex"
+      )}>
+        {showThread ? (
+          <ChatThread
+            conversation={selectedConversation}
+            onBack={() => setSelectedConversationId(null)}
+          />
+        ) : (
+          // Empty state for desktop
+          <div className="hidden md:flex flex-1 items-center justify-center bg-gray-50 dark:bg-gray-800">
+            <div className="text-center max-w-sm mx-auto px-4">
+              <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-10 h-10 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
               </div>
-            ) : (
-              matches.map((match) => (
-                <Link key={match.id} href={`/chats/${match.id}`}>
-                  <Card className="rounded-2xl hover:bg-muted/50 transition-colors cursor-pointer">
-                    <CardContent className="p-4">
-                      <div className="flex items-center space-x-4">
-                        <Avatar className="w-12 h-12">
-                          <AvatarImage src={match.other.avatarUrl} alt={match.other.name} />
-                          <AvatarFallback>
-                            <User className="w-6 h-6" />
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-bold text-gray-900 dark:text-gray-100">
-                            {match.other.name}
-                          </h3>
-                          <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                            {match.lastMessage}
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))
-            )}
-          </TabsContent>
-
-          {/* My Likes Tab */}
-          <TabsContent value="my-likes" className="space-y-4">
-            {myLikes.length === 0 ? (
-              <div className="text-center py-16">
-                <Heart className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-600 dark:text-gray-300 mb-2">
-                  Noch keine Likes
-                </h3>
-                <p className="text-gray-500 dark:text-gray-400">
-                  Like Projekte, die dich interessieren!
-                </p>
-              </div>
-            ) : (
-              myLikes.map((like) => (
-                <Card key={like.id} className="rounded-2xl">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-bold text-gray-900 dark:text-gray-100">
-                          {like.projectName}
-                        </h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center space-x-1">
-                          <Clock className="w-4 h-4" />
-                          <span>Warten auf Match…</span>
-                        </p>
-                      </div>
-                      <Heart className="w-5 h-5 text-red-500 fill-current" />
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </TabsContent>
-
-          {/* Received Likes Tab */}
-          <TabsContent value="received-likes" className="space-y-4">
-            {receivedLikes.length === 0 ? (
-              <div className="text-center py-16">
-                <Clock className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-600 dark:text-gray-300 mb-2">
-                  Noch keine Likes erhalten
-                </h3>
-                <p className="text-gray-500 dark:text-gray-400">
-                  Teile deine Projekte, um Likes zu erhalten!
-                </p>
-              </div>
-            ) : (
-              receivedLikes.map((like) => (
-                <Card key={like.id} className="rounded-2xl">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <Avatar className="w-12 h-12">
-                          <AvatarImage src={like.user.avatarUrl} alt={like.user.name} />
-                          <AvatarFallback>
-                            <User className="w-6 h-6" />
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <h3 className="font-bold text-gray-900 dark:text-gray-100">
-                            {like.user.name}
-                          </h3>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
-                            hat <span className="font-medium">{like.projectName}</span> geliked
-                          </p>
-                        </div>
-                      </div>
-                      <Button
-                        size="sm"
-                        className="bg-green-500 hover:bg-green-600"
-                        onClick={() => handleLikeBack(like.id, like.user.name)}
-                      >
-                        Like zurück
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </TabsContent>
-        </Tabs>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                Wähle eine Konversation
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">
+                Starte ein Gespräch mit anderen Projekt-Mitwirkenden aus der Liste links.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
