@@ -8,7 +8,7 @@ export async function upsertProfile(profileData: {
   location?: string
   about?: string
 }): Promise<void> {
-  const supabase = createSupabaseServer()
+  const supabase = await createSupabaseServer()
   
   // Get authenticated user
   const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -39,7 +39,7 @@ export async function createProject(projectData: {
   categories: string[]
   status: 'offen' | 'suche_hilfe' | 'biete_hilfe'
 }): Promise<void> {
-  const supabase = createSupabaseServer()
+  const supabase = await createSupabaseServer()
   
   // Get authenticated user
   const { data: { user }, error: authError } = await supabase.auth.getUser()

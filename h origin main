@@ -1,0 +1,5 @@
+[33m48db519[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Resolve merge conflict: use new modular profile components
+[33m11bb8e2[m[33m ([m[1;31morigin/dev[m[33m, [m[1;32mdev[m[33m)[m Remove SkillsSection import and usage from profile page
+[33m5d9e844[m feat: implement complete editable profile page with all onboarding data
+[33m1bd7bb1[m fix: resolve 406 Supabase errors with complete database setup
+[33mab67f57[m fix: resolve all critical onboarding and deployment issues

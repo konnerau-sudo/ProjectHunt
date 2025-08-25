@@ -16,14 +16,18 @@ export async function generateStaticParams() {
   }));
 }
 
-export default function ChatDetail({ params }: { params: { id: string } }) {
+export default function ChatDetail({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
 
   useEffect(() => {
-    // Redirect to main chat page with the conversation selected
-    // The main chat page will handle the selection through URL state or other mechanism
-    router.replace(`/chats?conversation=${params.id}`);
-  }, [params.id, router]);
+    // Handle async params in Next.js 15
+    const handleRedirect = async () => {
+      const resolvedParams = await params;
+      router.replace(`/chats?conversation=${resolvedParams.id}`);
+    };
+    
+    handleRedirect();
+  }, [params, router]);
 
   // Loading state while redirecting
   return (
