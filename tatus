@@ -1,0 +1,10 @@
+[33m7c1ee92[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mdev[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/dev[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m chore: update .env.example with placeholders
+[33mfa9713c[m chore: cleanup redundant env file
+[33m5e282ff[m chore(security): stop tracking .env.local; add .env.local.example
+[33mea4bcec[m Merge branch 'dev'
+[33m56dab24[m feat: Next.js 15.x Security Migration
+[33mec328b4[m Resolve merge conflict: use new modular profile components
+[33m939054e[m Remove SkillsSection import and usage from profile page
+[33meaa6a1e[m feat: implement complete editable profile page with all onboarding data
+[33m84c525c[m fix: resolve 406 Supabase errors with complete database setup
+[33m839dffc[m fix: resolve all critical onboarding and deployment issues

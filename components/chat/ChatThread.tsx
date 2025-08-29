@@ -24,66 +24,19 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
+import { Message as DBMessage } from '@/types/projecthunt';
 
-// Mock messages data
-const mockMessages = [
-  {
-    id: '1',
-    senderId: '2',
-    content: 'Hey! Ich habe dein EcoTracker Projekt gesehen. Das ist genau das, woran ich auch interessiert bin!',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2), // 2 days ago
-    deliveryStatus: 'read' as const,
-    isRead: true
-  },
-  {
-    id: '2',
-    senderId: '1',
-    content: 'Das freut mich zu hören! Hast du schon Erfahrung mit React Native?',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2 + 1000 * 60 * 30), // 2 days ago + 30min
-    deliveryStatus: 'read' as const,
-    isRead: true
-  },
-  {
-    id: '3',
-    senderId: '2',
-    content: 'Ja, definitiv! Ich habe mehrere Apps entwickelt und würde gerne bei der UI/UX helfen.',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2 + 1000 * 60 * 45), // 2 days ago + 45min
-    deliveryStatus: 'read' as const,
-    isRead: true
-  },
-  {
-    id: '4',
-    senderId: '2',
-    content: 'Hier ist mein Portfolio: portfolio.sarah-weber.de',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2 + 1000 * 60 * 46), // 2 days ago + 46min
-    deliveryStatus: 'read' as const,
-    isRead: true
-  },
-  {
-    id: '5',
-    senderId: '1',
-    content: 'Wow, beeindruckend! Besonders die Fitness-App gefällt mir. Wann können wir uns treffen?',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-    deliveryStatus: 'read' as const,
-    isRead: true
-  },
-  {
-    id: '6',
-    senderId: '2',
-    content: 'Gerne! Wann passt es dir denn?',
-    timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 min ago
-    deliveryStatus: 'delivered' as const,
-    isRead: false
-  },
-  {
-    id: '7',
-    senderId: '2',
-    content: 'Hey! Dein EcoTracker Projekt klingt super spannend. Wie kann ich helfen?',
-    timestamp: new Date(Date.now() - 1000 * 60 * 15), // 15 min ago
-    deliveryStatus: 'delivered' as const,
-    isRead: false
-  }
-];
+// Local message type for the UI component
+interface UIMessage {
+  id: string;
+  senderId: string;
+  content: string;
+  timestamp: Date;
+  deliveryStatus: 'sending' | 'sent' | 'delivered' | 'read';
+  isRead: boolean;
+}
+
+
 
 interface ChatThreadProps {
   conversation: Conversation;
@@ -91,10 +44,27 @@ interface ChatThreadProps {
 }
 
 export function ChatThread({ conversation, onBack }: ChatThreadProps) {
-  const [messages] = useState(mockMessages);
+  const [messages, setMessages] = useState<UIMessage[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isTyping, setIsTyping] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const currentUserId = '1'; // Mock current user ID
+  const currentUserId = '1'; // Mock current user ID - In production würde das aus dem Auth-Context kommen
+
+  // Konvertiert Datenbank-Messages zu UI-Messages
+  const convertDBMessageToUIMessage = (dbMessage: DBMessage): UIMessage => ({
+    id: dbMessage.id!,
+    senderId: dbMessage.sender_id,
+    content: dbMessage.content,
+    timestamp: new Date(dbMessage.created_at!),
+    deliveryStatus: 'read', // In einer echten App würde man das aus der DB holen
+    isRead: true
+  });
+
+  // Nachrichten laden beim Komponenten-Mount
+  useEffect(() => {
+    loadMessages();
+  }, [conversation.id]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -110,6 +80,62 @@ export function ChatThread({ conversation, onBack }: ChatThreadProps) {
     }, 5000);
     return () => clearInterval(interval);
   }, []);
+
+  const loadMessages = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(`/api/messages?matchId=${conversation.id}`);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Fehler beim Laden der Nachrichten');
+      }
+
+      const data = await response.json();
+      const uiMessages = (data.messages || []).map(convertDBMessageToUIMessage);
+      setMessages(uiMessages);
+    } catch (error) {
+      console.error('Fehler beim Laden der Nachrichten:', error);
+      toast.error(error instanceof Error ? error.message : 'Fehler beim Laden der Nachrichten');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const sendMessage = async (content: string) => {
+    if (isSending || content.trim().length === 0) return;
+
+    try {
+      setIsSending(true);
+      const response = await fetch('/api/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          matchId: conversation.id,
+          content: content.trim(),
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Fehler beim Senden der Nachricht');
+      }
+
+      const data = await response.json();
+      
+      // Neue Nachricht zu den bestehenden hinzufügen
+      const newUIMessage = convertDBMessageToUIMessage(data.message);
+      setMessages(prev => [...prev, newUIMessage]);
+      toast.success('Nachricht gesendet!');
+    } catch (error) {
+      console.error('Fehler beim Senden der Nachricht:', error);
+      toast.error(error instanceof Error ? error.message : 'Fehler beim Senden der Nachricht');
+    } finally {
+      setIsSending(false);
+    }
+  };
 
   // Keyboard support for back navigation
   useEffect(() => {
@@ -228,12 +254,21 @@ export function ChatThread({ conversation, onBack }: ChatThreadProps) {
         className="flex-1 overflow-y-auto overscroll-contain"
         ref={scrollRef}
       >
-        <MessagesVirtualList
-          messages={messages}
-          currentUserId={currentUserId}
-          participant={participant}
-          isTyping={isTyping}
-        />
+        {isLoading ? (
+          <div className="h-full flex items-center justify-center">
+            <div className="text-center">
+              <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-gray-600 dark:text-gray-400">Nachrichten werden geladen...</p>
+            </div>
+          </div>
+        ) : (
+          <MessagesVirtualList
+            messages={messages}
+            currentUserId={currentUserId}
+            participant={participant}
+            isTyping={isTyping}
+          />
+        )}
       </div>
       
       {/* Composer - Sticky at bottom */}
@@ -241,11 +276,8 @@ export function ChatThread({ conversation, onBack }: ChatThreadProps) {
         <div className="p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
           <Composer
             conversationId={conversation.id}
-            onSendMessage={(content) => {
-              // Mock message sending
-              console.log('Sending message:', content);
-              toast.success('Nachricht gesendet!');
-            }}
+            onSendMessage={sendMessage}
+            disabled={isSending}
           />
         </div>
       </div>

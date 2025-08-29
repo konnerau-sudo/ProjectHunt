@@ -12,6 +12,7 @@ interface ComposerProps {
   onSendMessage: (content: string) => void;
   placeholder?: string;
   maxLength?: number;
+  disabled?: boolean;
 }
 
 const STORAGE_KEY_PREFIX = 'chat_draft_';
@@ -21,7 +22,8 @@ export function Composer({
   conversationId, 
   onSendMessage, 
   placeholder = "Nachricht eingeben...",
-  maxLength = MAX_LENGTH 
+  maxLength = MAX_LENGTH,
+  disabled = false
 }: ComposerProps) {
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -103,7 +105,8 @@ export function Composer({
 
   const remainingChars = maxLength - message.length;
   const isNearLimit = remainingChars <= 100;
-  const canSend = message.trim().length > 0 && !isSending && remainingChars >= 0;
+  const isDisabled = disabled || isSending;
+  const canSend = message.trim().length > 0 && !isDisabled && remainingChars >= 0;
 
   return (
     <div className="p-2 bg-transparent">
@@ -116,7 +119,7 @@ export function Composer({
           onClick={handleAttachment}
           className="p-2 flex-shrink-0"
           aria-label="Datei anhängen"
-          disabled={isSending}
+          disabled={isDisabled}
         >
           <Paperclip className="w-4 h-4" />
         </Button>
@@ -129,7 +132,7 @@ export function Composer({
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
-            disabled={isSending}
+            disabled={isDisabled}
             className={cn(
               "w-full min-h-[44px] max-h-[120px] resize-none rounded-2xl border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-12 py-3 px-4 text-base leading-none",
               isNearLimit && "border-orange-300 focus:ring-orange-500"
@@ -162,7 +165,7 @@ export function Composer({
             onClick={handleEmoji}
             className="absolute bottom-1 right-1 p-1.5 h-auto"
             aria-label="Emoji hinzufügen"
-            disabled={isSending}
+            disabled={isDisabled}
           >
             <Smile className="w-4 h-4" />
           </Button>
@@ -181,7 +184,7 @@ export function Composer({
           )}
           aria-label="Nachricht senden"
         >
-          {isSending ? (
+          {isDisabled ? (
             <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
           ) : (
             <Send className="w-4 h-4" />
